@@ -1,0 +1,44 @@
+1 - 
+CRIAR USUARIO E DAR PERMISSÃO A ELE NO BANCO QUE SERÁ MONITORADO
+
+CREATE USER 'zbx_monitor'@'%' IDENTIFIED BY '<password>';
+GRANT USAGE,REPLICATION CLIENT,PROCESS,SHOW DATABASES,SHOW VIEW ON *.* TO 'zbx_monitor'@'%';
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2 - CRIAR O DIRETORIO
+mkdir /var/lib/zabbix
+
+criar o arquivo .my.cnf
+touch /var/lib/zabbix/.my.cnf
+
+inserir no arquivo criado os campos com usuario e senha que irão monitorar o banco (criados no passo 1)
+[client]
+user=zbx_monitor
+password=zbx_monitor
+
+dentro de /etc/zabbix/zabbix_agentd.conf.d/ caso não existe o arquivo template_db_mysql.conf, crie
+touch template_db_mysql.conf
+e insira dentro dele as informações
+
+#template_db_mysql.conf created by Zabbix for "Template DB MySQL" and Zabbix 4.2
+#For OS Linux: You need create .my.cnf in zabbix-agent home directory (/var/lib/zabbix by default)
+#For OS Windows: You need add PATH to mysql and mysqladmin and create my.cnf in %WINDIR%\my.cnf,C:\my.cnf,BASEDIR\my.cnf https://dev.mysql.com/doc/refman/5.7/en/option-files.html
+#The file must have three strings:
+
+UserParameter=mysql.ping, mysqladmin --defaults-extra-file='/var/lib/zabbix/.my.cnf' ping | grep -c alive
+UserParameter=mysql.get_status_variables, mysql --defaults-extra-file='/var/lib/zabbix/.my.cnf' -sNX -e "show global status"
+UserParameter=mysql.version, mysql -V
+UserParameter=mysql.db.discovery, mysql --defaults-extra-file='/var/lib/zabbix/.my.cnf' -sN -e "show databases"
+UserParameter=mysql.dbsize[*], mysql --defaults-extra-file='/var/lib/zabbix/.my.cnf' -sN -e "SELECT SUM(DATA_LENGTH + INDEX_LENGTH) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='$1'"
+UserParameter=mysql.replication.discovery[*], mysql --defaults-extra-file='/var/lib/zabbix/.my.cnf' -sNX -e "show slave status"
+UserParameter=mysql.slave_status[*], mysql --defaults-extra-file='/var/lib/zabbix/.my.cnf' -sN -e "show slave status"
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3 - 
+
+IMPORTE OS PATHS
+
+export PATH=$PATH:/usr/sbin/mysqld
+export PATH=$PATH:/usr/bin/mysql
+export PATH=$PATH:/usr/bin/mysqladmin
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4 - 
+IMPORTA OS TAMPLETES QUE ESTÃO NA PASTA
